@@ -1,0 +1,5 @@
+/target
+/articles/*
+/self_signed_certs/*
+/images
+data.json

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article_name }}{% endblock %}
+
+{% block content %}
+<div hx-get="/api/articles/{{ file_name }}" hx-trigger="load" class="container">
+</div>
+{% endblock %}

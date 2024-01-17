@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %} Home {%endblock %}
+
+{% block content %}
+<div class="container">
+	<h1>Last Articles</h1>
+	<div hx-get="/api/last-articles" hx-trigger="load">
+	</div>
+</div>
+{% endblock %}

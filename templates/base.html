@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>{% block title %}{{ title }} - My Site{% endblock %}</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link
+	  rel="stylesheet"
+	  href="https://cdn.jsdelivr.net/npm/@picocss/pico@next/css/pico.min.css"
+	/>
+	<link href="/assets/main.css" rel="stylesheet">
+        <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<style>
+.grid-2-1-resp {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+}
+
+@media screen and (max-width: 1023px) {
+.grid-2-1-resp {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+}
+</style>
+
+	{% block head %}{% endblock %}
+</head>
+
+<body>
+	<nav class="container ">
+		<ul>
+			<li><strong>Pierre-Emmanuel Devin</strong></li>
+		</ul>
+		<ul>
+			<li><a href="/">Home</a></li>
+			<li><a href="/me">Me</a></li>
+			<form hx-post="/api/search"  hx-target="#content">	<li>
+					<input type="search" placeholder="Search" hx-trigger="keyup changed delay:1s" name="terms" name="search"/>
+					<button style="display:none">Search</button>
+				</li>
+			</form>
+		</ul> 
+		<ul>
+			<li><a href="https://github.com/PierreM0">Github</a></li>
+		</ul>
+	</nav>
+	<hr>
+	<div id="content">
+		{% block content %}{% endblock %}
+	</div>
+</body>
+
+</html>
