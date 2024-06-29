@@ -49,8 +49,6 @@ struct Ports {
 async fn main() -> anyhow::Result<()> {
     ARGS.get_or_init(Args::parse);
 
-    println!("ARGS is {:?}", ARGS);
-
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .finish();
