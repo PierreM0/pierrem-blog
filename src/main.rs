@@ -1,26 +1,43 @@
-use std::{path::PathBuf, net::SocketAddr};
+use std::{net::SocketAddr, path::PathBuf};
 
-use axum::{Router, http::{StatusCode, Uri}, BoxError, response::Redirect, extract::Host, handler::HandlerWithoutStateExt};
+use axum::{
+    extract::Host,
+    handler::HandlerWithoutStateExt,
+    http::{StatusCode, Uri},
+    response::Redirect,
+    BoxError, Router,
+};
 use axum_server::tls_rustls::RustlsConfig;
 use tower_http::services::ServeDir;
-use tracing::{info, warn, Level};
+use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
 mod error;
 mod search;
 mod web;
-use crate::error::{Error, Result};
+use crate::error::Result;
+use clap::Parser;
+
+/// A simple blog engine with a search functionnality
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Disable TLS encryption and run the engine as HTTP
+    #[arg(long, default_value_t = false)]
+    notls: bool,
+
+    /// The path to the website folder, there should be a subfolder for article named `articles`, one for images named `images, and one for assets named `assets`
+    #[arg(short, long, default_value = ".")]
+    path: String,
+}
 
 pub fn get_article_path() -> Result<PathBuf> {
-    let current_dir = match std::env::current_dir() {
-        Ok(d) => d,
-        Err(e) => {
-            warn!("ERROR: {e}");
-            return Err(Error::NotFound);
-        }
-    };
-    Ok(current_dir.join("articles"))
+    let path = ARGS.get_or_init(Args::parse).path.clone();
+    let path = format!("{path}/articles");
+    Ok(PathBuf::from(std::ffi::OsStr::new(&path)))
 }
+
+const ARGS: std::cell::OnceCell<Args> = std::cell::OnceCell::new();
 
 #[derive(Clone, Copy)]
 struct Ports {
@@ -30,6 +47,10 @@ struct Ports {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    ARGS.get_or_init(Args::parse);
+
+    println!("ARGS is {:?}", ARGS);
+
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .finish();
@@ -39,43 +60,58 @@ async fn main() -> anyhow::Result<()> {
         http: 7878,
         https: 6969,
     };
-    tokio::spawn(redirect_http_to_https(ports));
-    let config = RustlsConfig::from_pem_file(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("self_signed_certs")
-            .join("cert.pem"),
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("self_signed_certs")
-            .join("key.pem"),
-    )
-    .await
-    .unwrap();
 
     info!("Creating Router...");
-    let curr_dir_path = std::env::current_dir().unwrap();
     let app = Router::new()
         .merge(web::web::route())
         .nest("/api", web::api::route())
         .nest_service(
             "/assets",
-            ServeDir::new(format!("{}/assets", curr_dir_path.to_str().unwrap())),
+            ServeDir::new(format!("{}/assets", ARGS.get_or_init(Args::parse).path)),
         )
         .nest_service(
             "/images",
-            ServeDir::new(format!("{}/images", curr_dir_path.to_str().unwrap())),
+            ServeDir::new(format!("{}/images", ARGS.get_or_init(Args::parse).path)),
         );
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], ports.https));
-
     info!("router initialized, now listening on port {}", addr);
 
-    axum_server::bind_rustls(addr, config)
-        .serve(app.into_make_service())
-        .await?;
+    if !ARGS.get_or_init(Args::parse).notls {
+        tokio::spawn(redirect_http_to_https(ports));
+        let cert = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("self_signed_certs")
+            .join("cert.pem");
+        let key = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("self_signed_certs")
+            .join("key.pem");
+
+        if !cert.exists() {
+            panic!(
+                "The cert file `{}` does not exists",
+                cert.to_str().expect("it must be Some")
+            );
+        };
+        if !key.exists() {
+            panic!(
+                "The key file `{}` does not exists",
+                key.to_str().expect("it must be Some")
+            );
+        };
+
+        let config = RustlsConfig::from_pem_file(cert, key).await.unwrap();
+
+        axum_server::bind_rustls(addr, config)
+            .serve(app.into_make_service())
+            .await?;
+    } else {
+        axum_server::bind(addr)
+            .serve(app.into_make_service())
+            .await?;
+    }
 
     Ok(())
 }
-
 
 async fn redirect_http_to_https(ports: Ports) {
     fn make_https(host: String, uri: Uri, ports: Ports) -> std::result::Result<Uri, BoxError> {

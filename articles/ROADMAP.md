@@ -1,0 +1,3 @@
+- [ ] Cargo clippy
+- [ ] Better CSS
+- [ ] Bettter custimizability

@@ -65,22 +65,9 @@ fn get_name_from_article_path(path: &str) -> String {
         .as_path()
         .with_extension("")
         .to_str()
-        .expect("it exists")
-        .split("-")
-        .enumerate()
-        .filter_map(|(i, elm)| if i != 0 { Some(elm) } else { None })
-        .collect::<Vec<_>>()
-        .join(" ")
-        .chars()
-        .enumerate()
-        .map(|(i, c)| {
-            if i == 0 {
-                c.to_uppercase().next().unwrap_or(c)
-            } else {
-                c
-            }
-        })
-        .collect()
+        .expect("modern operating system (utf8 needed)")
+        .replace("_", " ")
+        .to_string()
 }
 
 struct HtmlTemplate<T>(T);
