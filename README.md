@@ -11,7 +11,7 @@ then go to
 
 Option :
 - `notls` : disable rustls and run the engine as HTTP
-- `path` : path to the website folder, there should be a subfolder for article named `articles`, one for images named `images, and one for assets named `assets`
+- `path` : path to the website folder, there should be a subfolder for article named `articles`, one for images named `images`, and one for assets named `assets`
 
 ***
 
